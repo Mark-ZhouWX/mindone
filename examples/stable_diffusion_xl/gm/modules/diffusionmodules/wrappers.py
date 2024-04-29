@@ -8,13 +8,11 @@ class IdentityWrapper(nn.Cell):
         super().__init__()
         self.diffusion_model = diffusion_model
 
-    @ms.jit
     def construct(self, *args, **kwargs):
         return self.diffusion_model(*args, **kwargs)
 
 
 class OpenAIWrapper(IdentityWrapper):
-    @ms.jit
     def construct(
         self, x: Tensor, t: Tensor, concat: Tensor = None, context: Tensor = None, y: Tensor = None, **kwargs
     ) -> Tensor:

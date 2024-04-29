@@ -767,7 +767,6 @@ class UNetModel(nn.Cell):
         if use_recompute:
             self.recompute_strategy_v1()
 
-    @jit
     def construct(self, x, timesteps=None, context=None, y=None, **kwargs):
         """
         Apply the model to an input batch.
@@ -1188,7 +1187,6 @@ class UNetModelStage1(nn.Cell):
         if use_recompute:
             self.recompute_strategy_v1()
 
-    @jit
     def construct(self, x, timesteps=None, context=None, y=None, **kwargs):
         hs, hs_idx = (), -1
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False, dtype=x.dtype)
@@ -1477,7 +1475,6 @@ class UNetModelStage2(nn.Cell):
             # self.recompute_strategy_v0()
             self.recompute_strategy_v1()
 
-    @jit
     def construct(self, h, emb, context, *hs):
         # h, emb, context, hs[0:9]
         hs_idx = 8

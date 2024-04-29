@@ -123,7 +123,6 @@ class AdamWeightDecayZeRO1(nn.Optimizer):
             news.append(new)
         return ParameterTuple(news)
 
-    @ms.jit
     def construct(self, gradients):
         gradients = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), gradients)
         params = self.hyper_map(F.partial(split_params, self.shard_id, self.shard_size), self._parameters)

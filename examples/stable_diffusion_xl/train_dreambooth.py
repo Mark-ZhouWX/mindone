@@ -241,7 +241,7 @@ def train(args):
         train_step_fn = partial(
             model.train_step_pynative,
             grad_func=model.get_grad_func(
-                optimizer, reducer, scaler, jit=True, overflow_still_update=args.overflow_still_update
+                optimizer, reducer, scaler, jit=False, overflow_still_update=args.overflow_still_update
             ),
         )
         model = auto_mixed_precision(model, args.ms_amp_level)

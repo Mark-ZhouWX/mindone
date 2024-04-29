@@ -495,7 +495,6 @@ class PreProcessModel(nn.Cell):
         self.loss_fn = engine.loss_fn
         self.denoiser = engine.denoiser
 
-    @ms.jit
     def construct(self, x, *tokens):
         # get latent target
         x = self.first_stage_model.encode(x)
@@ -527,7 +526,6 @@ class PreProcessModelWithoutConditioner(nn.Cell):
         self.loss_fn = engine.loss_fn
         self.denoiser = engine.denoiser
 
-    @ms.jit
     def construct(self, x):
         # get latent target
         x = self.first_stage_model.encode(x)
@@ -548,7 +546,6 @@ class LatentDiffusionStage1(nn.Cell):
         self.stage1 = engine.stage1
         self.denoiser = engine.denoiser
 
-    @ms.jit
     def construct(self, x, noised_input, sigmas, w, context, y):
         c_skip, c_out, c_in, c_noise = self.denoiser(sigmas, noised_input.ndim)
         stage1_outputs = self.stage1(
@@ -578,7 +575,6 @@ class LatentDiffusionStage1WithConditioner(nn.Cell):
         self.stage1 = engine.stage1
         self.denoiser = engine.denoiser
 
-    @ms.jit
     def construct(self, x, noised_input, sigmas, w, *tokens):
         # get condition
         vector, crossattn, concat = self.conditioner(*tokens)
@@ -612,7 +608,6 @@ class LatentDiffusionStage2WithLoss(nn.Cell):
         self.loss_fn = engine.loss_fn
         self.scaler = scaler
 
-    @ms.jit
     def construct(self, x, noised_input, w, c_out, c_skip, *stage2_inputs):
         model_output = self.stage2(*stage2_inputs)
         model_output = model_output * c_out + noised_input * c_skip
@@ -634,7 +629,6 @@ class LatentDiffusionStage1Grad(nn.Cell):
         self.weights = self.optimizer.parameters
         self.grad_fn = ops.GradOperation(get_all=False, get_by_list=True, sens_param=True)
 
-    @ms.jit
     def construct(self, *args):
         inputs = args[:-17]
         sens = args[-17:]
@@ -667,7 +661,6 @@ class LatentDiffusionStage2Grad(nn.Cell):
         self.weights = self.optimizer.parameters
         self.grad_fn = ops.GradOperation(get_all=True, get_by_list=True, sens_param=False)
 
-    @ms.jit
     def construct(self, *args):
         inputs = args[:]
         loss = self.network(*inputs)
