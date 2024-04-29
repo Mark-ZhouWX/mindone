@@ -137,15 +137,15 @@ class DiffusionEngine(nn.Cell):
         def grad_and_update_func(x, noised_input, sigmas, w, concat, context, y):
             loss, grads = grad_fn(x, noised_input, sigmas, w, concat, context, y)
             grads = reducer(grads)
-            unscaled_grads = scaler.unscale(grads)
-            grads_finite = all_finite(unscaled_grads)
+            grads = scaler.unscale(grads)
+            grads_finite = all_finite(grads)
             if overflow_still_update:
-                loss = ops.depend(loss, optimizer(unscaled_grads))
+                loss = ops.depend(loss, optimizer(grads))
             else:
                 if grads_finite:
-                    loss = ops.depend(loss, optimizer(unscaled_grads))
+                    loss = ops.depend(loss, optimizer(grads))
             overflow_tag = not grads_finite
-            return scaler.unscale(loss), unscaled_grads, overflow_tag
+            return scaler.unscale(loss), grads, overflow_tag
 
         @ms.jit
         def jit_warpper(*args, **kwargs):
@@ -452,15 +452,15 @@ class DiffusionEngineDreamBooth(DiffusionEngine):
                 reg_y,
             )
             grads = reducer(grads)
-            unscaled_grads = scaler.unscale(grads)
-            grads_finite = all_finite(unscaled_grads)
+            grads = scaler.unscale(grads)
+            grads_finite = all_finite(grads)
             if overflow_still_update:
-                loss = ops.depend(loss, optimizer(unscaled_grads))
+                loss = ops.depend(loss, optimizer(grads))
             else:
                 if grads_finite:
-                    loss = ops.depend(loss, optimizer(unscaled_grads))
+                    loss = ops.depend(loss, optimizer(grads))
             overflow_tag = not grads_finite
-            return scaler.unscale(loss), unscaled_grads, overflow_tag
+            return scaler.unscale(loss), grads, overflow_tag
 
         @ms.jit
         def jit_warpper(*args, **kwargs):
