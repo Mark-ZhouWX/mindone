@@ -629,6 +629,7 @@ class TrainStep(nn.Cell, metaclass=ABCMeta):
         loss_scaler: Optional[Union[StaticLossScaler, DynamicLossScaler]] = None,
         max_grad_norm: Optional[float] = None,
         gradient_accumulation_steps: Optional[int] = None,
+        zero_helper = None,
         **kwargs,
     ):
         super().__init__()
@@ -646,7 +647,20 @@ class TrainStep(nn.Cell, metaclass=ABCMeta):
             self.parameters, gradient_accumulation_steps, **gradient_accumulation_kwargs
         )
 
-        self.forward_and_backward = ops.value_and_grad(self.forward, None, weights=self.parameters, has_aux=True)
+        # zero init
+        if zero_helper is not None:
+            self.zero_helper = zero_helper
+            self.zero_stage = zero_helper.zero_stage
+            self.run_optimizer = zero_helper.run_optimizer
+            if self.zero_stage != 0:
+                self.grad_accumulator.grad_reducer = nn.Identity()
+                self.zero_helper.split_params()
+        else:
+            self.zero_stage = 0
+            self.zero_helper = None
+            self.run_optimizer = self.optimizer
+
+        self.forward_and_backward = ops.value_and_grad(self.forward, None, weights=self.parameters, has_aux=False)
 
     @property
     def sync_gradients(self):
@@ -664,11 +678,17 @@ class TrainStep(nn.Cell, metaclass=ABCMeta):
     def forward(self, *args, **kwargs):
         # You need to scale the loss when performing the model forward pass to create scaled gradients.
         # Do **NOT** forget to include 'loss = self.scale_loss(loss)' after loss calculation!
-        ...
+        loss = self.model(*args, **kwargs)
+        loss = self.scale_loss(loss)
+        return loss
 
     def construct(self, *inputs):
         outputs, grads = self.forward_and_backward(*inputs)
         grads = self.grad_accumulator.step(grads)
+
+        # Gradient communication
+        if self.zero_helper is not None:
+            grads = self.zero_helper.cal_gradients(grads)
 
         if self.sync_gradients:
             # Scaled loss creates scaled gradients. Unscales the gradients.
@@ -679,7 +699,7 @@ class TrainStep(nn.Cell, metaclass=ABCMeta):
 
             # If these gradients do not contain infs or NaNs, optimizer.step() is then called,
             # otherwise, optimizer.step() is skipped.
-            self.grad_scaler.step(self.optimizer, grads)
+            self.grad_scaler.step(self.run_optimizer, grads)
 
             # Updates the scale for next iteration.
             self.grad_scaler.update()
@@ -688,6 +708,5 @@ class TrainStep(nn.Cell, metaclass=ABCMeta):
             self.grad_accumulator.zero_grad()
 
         # The first item of outputs is loss. Unscales the loss for outside logging.
-        loss = self.unscale_loss(outputs[0])
-        outputs = (loss,) + outputs[1:]
-        return outputs
+        loss = self.unscale_loss(outputs)
+        return loss
