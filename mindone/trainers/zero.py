@@ -104,6 +104,7 @@ class ZeroHelper:
         self.optimizer = optimizer
         self.zero_stage = zero_stage
         self.op_group = op_group
+        self.optimizer._parameters = self.optimizer.parameters
         self.ori_parameters = self.optimizer._parameters
         # Init parallel settings
         self.is_parallel = _get_parallel_mode() == ParallelMode.DATA_PARALLEL

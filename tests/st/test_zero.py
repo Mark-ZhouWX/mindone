@@ -110,14 +110,40 @@ def test_zero_train_step(x, y, zero_stage=0, comm_fusion=False):
         print(f"== {i} == loss", loss)
 
 
+def test_zero_mint_adamw(x, y, zero_stage=0, comm_fusion=False):
+    print("-" * 30)
+    print("-" * 6, f"zero_stage={zero_stage}", " at TrainStep","-" * 6)
+    print("-" * 30)
+    ms.set_seed(1)
+    net = nn.WithLossCell(TestNet(), nn.MSELoss())
+    opt = ms.mint.optim.AdamW(net.trainable_params(), lr=1e-3, eps=1e-6, weight_decay=0.0)
+    ema = None
+    comm_fusion_dict = None
+    if comm_fusion:
+        comm_fusion_dict = {
+            "allreduce": {"bucket_size": 64},
+            "reduce_scatter": {"bucket_size": 64},
+            "allgather": {"bucket_size": 64},
+        }
+    train_net = create_train_network(
+        net, opt, zero_stage=zero_stage, max_grad_norm=None, op_group=GlobalComm.WORLD_COMM_GROUP, comm_fusion=comm_fusion_dict
+    )
+
+    for i in range(10):
+        loss = train_net(x, y)
+        print(f"== {i} == loss", loss)
+
+
 if __name__ == "__main__":
     comm_fusion = False
     group_size, rank_id = init_env(mode=0, distribute=True, save_graph=False, comm_fusion=comm_fusion)
     set_logger(name="", output_dir="logs", rank=rank_id, log_level="DEBUG")
-    x = ms.Tensor(np.random.uniform(-1, 1, (1, 2, 5, 5)).astype(np.float32) * (get_rank() + 1))
-    y = ms.Tensor(np.random.uniform(-1, 1, (1, 2, 5, 5)).astype(np.float32) * (get_rank() + 1))
+    x = ms.Tensor(np.random.uniform(-1, 1, (1, 2, 5, 5)).astype(np.float32))
+    y = ms.Tensor(np.random.uniform(-1, 1, (1, 2, 5, 5)).astype(np.float32))
     # test_zero(x, y, zero_stage=0, comm_fusion=comm_fusion)
     # test_zero(x, y, zero_stage=1, comm_fusion=comm_fusion)
-    test_zero_train_step(x, y, zero_stage=1, comm_fusion=comm_fusion)
     # test_zero(x, y, zero_stage=2, comm_fusion=comm_fusion)
     # test_zero(x, y, zero_stage=3, comm_fusion=comm_fusion)
+
+    # test_zero_train_step(x, y, zero_stage=1, comm_fusion=comm_fusion)
+    test_zero_mint_adamw(x, y, zero_stage=1, comm_fusion=comm_fusion)
