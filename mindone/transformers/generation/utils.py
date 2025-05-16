@@ -83,8 +83,108 @@ if TYPE_CHECKING:
 logger = logging.get_logger(__name__)
 
 
+@dataclass
+class GenerateBeamDecoderOnlyOutput(ModelOutput):
+    """
+    Outputs of decoder-only generation models, when using beam methods.
+    Args:
+        sequences (`ms.Tensor` of shape `(batch_size*num_return_sequences, sequence_length)`):
+            The generated sequences. The second dimension (sequence_length) is either equal to `max_length` or shorter
+            if all batches finished early due to the `eos_token_id`.
+        sequences_scores (`ms.Tensor` of shape `(batch_size*num_return_sequences)`, *optional*, returned when `output_scores=True`):
+            Final beam scores of the generated `sequences`.
+        scores (`tuple(ms.Tensor)` *optional*, returned when `output_scores=True`):
+            Beam transition scores for each vocabulary token at each generation step. Beam transition scores consisting
+            of log probabilities of tokens conditioned on log softmax of previously generated tokens in this beam.
+            Tuple of `ms.Tensor` with up to `max_new_tokens` elements (one element for each generated token),
+            with each tensor of shape `(batch_size*num_beams, config.vocab_size)`.
+        logits (`tuple(ms.Tensor)` *optional*, returned when `output_logits=True`):
+            Unprocessed prediction scores of the language modeling head (scores for each vocabulary token before SoftMax)
+            at each generation step. Tuple of `ms.Tensor` with up to `max_new_tokens` elements (one element for
+            each generated token), with each tensor of shape `(batch_size, config.vocab_size)`.
+        beam_indices (`ms.Tensor`, *optional*, returned when `output_scores=True`):
+            Beam indices of generated token id at each generation step. `ms.Tensor` of shape
+            `(batch_size*num_return_sequences, sequence_length)`.
+        attentions (`tuple(tuple(ms.Tensor))`, *optional*, returned when `output_attentions=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `ms.Tensor` of shape `(batch_size*num_beams, num_heads, generated_length, sequence_length)`.
+        hidden_states (`tuple(tuple(ms.Tensor))`, *optional*, returned when `output_hidden_states=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `ms.Tensor` of shape `(batch_size*num_beams*num_return_sequences, generated_length, hidden_size)`.
+        past_key_values (`tuple(tuple(ms.Tensor)))`, *optional*, returned when `use_cache=True`):
+            Returns the model cache, used to speed up decoding. Different models have a different cache format, check
+            the model's documentation. Usually, a [`~cache_utils.Cache`] instance.
+    """
+
+    sequences: ms.Tensor = None
+    sequences_scores: Optional[ms.Tensor] = None
+    scores: Optional[Tuple[ms.Tensor]] = None
+    logits: Optional[Tuple[ms.Tensor]] = None
+    beam_indices: Optional[ms.Tensor] = None
+    attentions: Optional[Tuple[Tuple[ms.Tensor]]] = None
+    hidden_states: Optional[Tuple[Tuple[ms.Tensor]]] = None
+    past_key_values: Optional[Tuple[Tuple[Tuple[ms.Tensor]]]] = None
+
+
+@dataclass
+class GenerateBeamEncoderDecoderOutput(ModelOutput):
+    """
+    Outputs of encoder-decoder generation models, when using beam methods.
+    Args:
+        sequences (`ms.Tensor` of shape `(batch_size*num_return_sequences, sequence_length)`):
+            The generated sequences. The second dimension (sequence_length) is either equal to `max_length` or shorter
+            if all batches finished early due to the `eos_token_id`.
+        sequences_scores (`ms.Tensor` of shape `(batch_size*num_return_sequences)`, *optional*, returned when `output_scores=True`):
+            Final beam scores of the generated `sequences`.
+        scores (`tuple(ms.Tensor)` *optional*, returned when `output_scores=True`):
+            Beam transition scores for each vocabulary token at each generation step. Beam transition scores consisting
+            of log probabilities of tokens conditioned on log softmax of previously generated tokens in this beam.
+            Tuple of `ms.Tensor` with up to `max_new_tokens` elements (one element for each generated token),
+            with each tensor of shape `(batch_size*num_beams, config.vocab_size)`.
+        logits (`tuple(ms.Tensor)` *optional*, returned when `output_logits=True`):
+            Unprocessed prediction scores of the language modeling head (scores for each vocabulary token before SoftMax)
+            at each generation step. Tuple of `ms.Tensor` with up to `max_new_tokens` elements (one element for
+            each generated token), with each tensor of shape `(batch_size, config.vocab_size)`.
+        beam_indices (`ms.Tensor`, *optional*, returned when `output_scores=True`):
+            Beam indices of generated token id at each generation step. `ms.Tensor` of shape
+            `(batch_size*num_return_sequences, sequence_length)`.
+        encoder_attentions (`tuple(ms.Tensor)`, *optional*, returned when `output_attentions=True`):
+            Tuple of `ms.Tensor` (one for each layer of the decoder) of shape `(batch_size, num_heads,
+            sequence_length, sequence_length)`.
+        encoder_hidden_states (`tuple(ms.Tensor)`, *optional*, returned when `output_hidden_states=True`):
+            Tuple of `ms.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size*num_beams*num_return_sequences, sequence_length, hidden_size)`.
+        decoder_attentions (`tuple(tuple(ms.Tensor))`, *optional*, returned when `output_attentions=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `ms.Tensor` of shape `(batch_size*num_beams*num_return_sequences, num_heads, generated_length,
+            sequence_length)`.
+        cross_attentions (`tuple(tuple(ms.Tensor))`, *optional*, returned when `output_attentions=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `ms.Tensor` of shape `(batch_size, num_heads, generated_length, sequence_length)`.
+        decoder_hidden_states (`tuple(tuple(ms.Tensor))`, *optional*, returned when `output_hidden_states=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `ms.Tensor` of shape `(batch_size*num_beams*num_return_sequences, generated_length, hidden_size)`.
+        past_key_values (`tuple(tuple(ms.Tensor)))`, *optional*, returned when `use_cache=True`):
+            Returns the model cache, used to speed up decoding. Different models have a different cache format, check
+            the model's documentation. Usually, a [`~cache_utils.Cache`] instance.
+    """
+
+    sequences: ms.Tensor = None
+    sequences_scores: Optional[ms.Tensor] = None
+    scores: Optional[Tuple[ms.Tensor]] = None
+    logits: Optional[Tuple[ms.Tensor]] = None
+    beam_indices: Optional[ms.Tensor] = None
+    encoder_attentions: Optional[Tuple[ms.Tensor]] = None
+    encoder_hidden_states: Optional[Tuple[ms.Tensor]] = None
+    decoder_attentions: Optional[Tuple[Tuple[ms.Tensor]]] = None
+    cross_attentions: Optional[Tuple[Tuple[ms.Tensor]]] = None
+    decoder_hidden_states: Optional[Tuple[Tuple[ms.Tensor]]] = None
+    past_key_values: Optional[Tuple[Tuple[Tuple[ms.Tensor]]]] = None
+
+
 NEED_SETUP_CACHE_CLASSES_MAPPING = {}
 QUANT_BACKEND_CLASSES_MAPPING = {}
+GenerateBeamOutput = Union[GenerateBeamDecoderOnlyOutput, GenerateBeamEncoderDecoderOutput]
 
 # Variable names used to hold the cache at generation time
 ALL_CACHE_NAMES = [
